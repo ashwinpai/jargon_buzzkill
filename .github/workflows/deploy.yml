@@ -1,4 +1,4 @@
-name: Deploy BuzzKill to GitHub Pages
+name: Deploying BuzzKill thru GitHub Pages
 
 on:
   push:
@@ -155,27 +155,37 @@ jobs:
               { phrase: "CIRCLE BACK", translation: "I'm ignoring this forever", usage: "When someone asks you to do something you have no intention of doing", danger: 3, category: "Meeting Jargon" },
               { phrase: "MOVE THE NEEDLE", translation: "Make literally any impact", usage: "When your boss wants to sound strategic about basic improvements", danger: 4, category: "Executive Speech" },
               { phrase: "BOIL THE OCEAN", translation: "Attempting the impossible", usage: "When someone's project scope is ridiculously large", danger: 4, category: "Project Management" },
-              { phrase: "LOW HANGING FRUIT", translation: "The easy stuff we should've done months ago", usage: "When pretending obvious tasks are strategic wins", danger: 2, category: "Strategy Jargon" }
+              { phrase: "LOW HANGING FRUIT", translation: "The easy stuff we should've done months ago", usage: "When pretending obvious tasks are strategic wins", danger: 2, category: "Strategy Jargon" },
+              { phrase: "REACH OUT", translation: "Contact someone", usage: "By people allergic to the word 'email'", danger: 1, category: "Communication" },
+              { phrase: "BANDWIDTH", translation: "Time or energy to do work", usage: "When saying no without saying no", danger: 2, category: "Resource Management" }
             ],
             tuesday: [
               { phrase: "TOUCH BASE", translation: "Pointless check-in meeting", usage: "When you need to justify your calendar", danger: 3, category: "Meeting Jargon" },
               { phrase: "SYNERGY", translation: "We're forcing teams to work together", usage: "During mergers or when justifying layoffs", danger: 5, category: "Executive Speech" },
-              { phrase: "BANDWIDTH", translation: "Time or energy to do work", usage: "When saying no without saying no", danger: 2, category: "Resource Management" }
+              { phrase: "OUTSIDE THE BOX", translation: "The absolute bare minimum of creativity", usage: "When a manager wants a new idea but not a *new* new idea", danger: 3, category: "Innovation" },
+              { phrase: "LEVERAGE", translation: "Use", usage: "When 'use' sounds too simple", danger: 3, category: "Action Verbs" },
+              { phrase: "LOOP IN", translation: "Add to email chain", usage: "When spreading blame or credit", danger: 2, category: "Communication" }
             ],
             wednesday: [
               { phrase: "PIVOT", translation: "Our strategy failed, trying something else", usage: "When pretending failure is innovation", danger: 4, category: "Strategy Jargon" },
               { phrase: "DEEP DIVE", translation: "Actually look at the details", usage: "When someone finally wants to understand something", danger: 2, category: "Analysis Jargon" },
-              { phrase: "TABLE THIS", translation: "Never speak of this again", usage: "When killing ideas politely", danger: 3, category: "Meeting Jargon" }
+              { phrase: "TABLE THIS", translation: "Never speak of this again", usage: "When killing ideas politely", danger: 3, category: "Meeting Jargon" },
+              { phrase: "SINK THE SHIP", translation: "Take complete ownership of a task (or ruin it)", usage: "A confusing metaphor for responsibility", danger: 4, category: "Project Management" },
+              { phrase: "IN THE PIPELINE", translation: "Something that might happen eventually", usage: "When overpromising future features", danger: 3, category: "Status Update" }
             ],
             thursday: [
               { phrase: "PING ME", translation: "Send me a message", usage: "By people who think they're in The Matrix", danger: 1, category: "Communication" },
-              { phrase: "LEVERAGE", translation: "Use", usage: "When 'use' sounds too simple", danger: 3, category: "Action Verbs" },
-              { phrase: "PARKING LOT", translation: "Idea graveyard", usage: "For topics we're pretending we'll discuss later", danger: 4, category: "Meeting Jargon" }
+              { phrase: "PARKING LOT", translation: "Idea graveyard", usage: "For topics we're pretending we'll discuss later", danger: 4, category: "Meeting Jargon" },
+              { phrase: "DRINKING FROM THE FIREHOSE", translation: "Overwhelmed by too much information", usage: "A complaint disguised as a status report", danger: 5, category: "Resource Management" },
+              { phrase: "ACTIONABLE INSIGHTS", translation: "A report that isn't completely useless", usage: "When justifying the cost of a consulting firm", danger: 5, category: "Executive Speech" },
+              { phrase: "RIGHT-SIZE THE TEAM", translation: "Layoffs are happening", usage: "Used by HR to soften the blow of staff reduction", danger: 5, category: "Human Resources" }
             ],
             friday: [
-              { phrase: "REACH OUT", translation: "Contact someone", usage: "By people allergic to the word 'email'", danger: 1, category: "Communication" },
-              { phrase: "LOOP IN", translation: "Add to email chain", usage: "When spreading blame or credit", danger: 2, category: "Communication" },
-              { phrase: "ALIGN", translation: "Agree", usage: "When making agreement sound harder than it is", danger: 2, category: "Collaboration" }
+              { phrase: "ALIGN", translation: "Agree", usage: "When making agreement sound harder than it is", danger: 2, category: "Collaboration" },
+              { phrase: "CORE COMPETENCY", translation: "What the company is actually good at", usage: "When describing the one thing your department can't mess up", danger: 4, category: "Strategy Jargon" },
+              { phrase: "FUTURE-PROOFING OUR CORE COMPETENCIES", translation: "Hoping our basic skills don't become useless next week", usage: "A phrase that combines multiple layers of jargon", danger: 5, category: "Strategy Jargon" },
+              { phrase: "SHIFTING THE PARADIGM", translation: "A minor process change", usage: "When making small adjustments sound revolutionary", danger: 5, category: "Innovation" },
+              { phrase: "LOW FIDELITY PROTOTYPE", translation: "A drawing on a napkin", usage: "When documenting the earliest stage of an idea", danger: 3, category: "Product Development" }
             ]
           };
 
@@ -210,7 +220,14 @@ jobs:
               if (gameDay === 'sunday' || gameDay === 'saturday') gameDay = 'monday';
               setDayOfWeek(gameDay);
               const jargonList = JARGON_DATABASE[gameDay];
-              setCurrentJargon(jargonList[Math.floor(Math.random() * jargonList.length)]);
+              // Ensure we don't crash if the day list is empty
+              if (jargonList && jargonList.length > 0) {
+                setCurrentJargon(jargonList[Math.floor(Math.random() * jargonList.length)]);
+              } else {
+                // Fallback or display error state
+                console.error("Jargon list for this day is empty.");
+                setCurrentJargon(null);
+              }
             }, []);
 
             const config = DIFFICULTY_CONFIG[dayOfWeek];
@@ -219,8 +236,9 @@ jobs:
               if (!currentJargon) return '';
               return currentJargon.phrase.split(' ').map(word => {
                 return word.split('').map((letter, idx) => {
-                  if (config.vowels && 'AEIOU'.includes(letter)) return letter;
-                  if (config.firstLetter && (idx === 0 || idx === word.length - 1)) return letter;
+                  const upperLetter = letter.toUpperCase();
+                  if (config.vowels && 'AEIOU'.includes(upperLetter)) return upperLetter;
+                  if (config.firstLetter && (idx === 0 || idx === word.length - 1)) return upperLetter;
                   return '_';
                 }).join('');
               }).join('   ');
@@ -228,20 +246,53 @@ jobs:
 
             const getLetterState = (letter, index) => {
               if (!currentJargon) return 'gray';
-              const target = currentJargon.phrase.replace(/\s/g, '');
+              const target = currentJargon.phrase.toUpperCase().replace(/\s/g, '');
+              const cleanGuess = guesses[guesses.length - 1].toUpperCase().replace(/\s/g, '');
+
+              // Check for exact match (Green)
               if (target[index] === letter) return 'green';
+              
+              // Check for presence (Yellow) - need to handle count to prevent over-coloring
+              const targetCount = target.split('').filter(l => l === letter).length;
+              let yellowCount = 0;
+              
+              for (let i = 0; i < cleanGuess.length; i++) {
+                if (cleanGuess[i] === letter && target.includes(letter) && target[i] !== cleanGuess[i]) {
+                  if (yellowCount < targetCount) yellowCount++;
+                }
+              }
+              
+              // Simplification: just check if it's anywhere in the target phrase (less strict than Wordle, but easier to implement here)
               if (target.includes(letter)) return 'yellow';
+              
               return 'gray';
             };
+            
+            // Simplified check used only for tile coloring
+            const getTileState = (letter, position) => {
+                if (!currentJargon) return 'gray';
+                const target = currentJargon.phrase.toUpperCase().replace(/\s/g, '');
+                
+                if (target[position] === letter.toUpperCase()) return 'green';
+                
+                if (target.includes(letter.toUpperCase())) return 'yellow';
+                
+                return 'gray';
+            };
+
 
             const handleGuess = () => {
               if (!currentJargon || gameState !== 'playing') return;
               const cleanGuess = guess.toUpperCase().trim();
               if (cleanGuess.length === 0) return;
+              
+              // Basic validation (e.g., must match phrase length if possible, or just accept any)
+              // For simplicity, we'll accept any non-empty guess for now.
+
               const newGuesses = [...guesses, cleanGuess];
               setGuesses(newGuesses);
               setGuess('');
-              if (cleanGuess === currentJargon.phrase) {
+              if (cleanGuess === currentJargon.phrase.toUpperCase()) {
                 setGameState('won');
                 setStats(prev => ({ gamesPlayed: prev.gamesPlayed + 1, gamesWon: prev.gamesWon + 1, currentStreak: prev.currentStreak + 1 }));
               } else if (newGuesses.length >= config.tries) {
@@ -259,17 +310,25 @@ jobs:
 
             const shareResults = () => {
               const emojis = guesses.map(g => {
-                const guessClean = g.replace(/\s/g, '');
+                const target = currentJargon.phrase.toUpperCase().replace(/\s/g, '');
+                const guessClean = g.toUpperCase().replace(/\s/g, '');
                 let result = '';
                 for (let i = 0; i < guessClean.length; i++) {
-                  const state = getLetterState(guessClean[i], i);
+                  const state = getTileState(guessClean[i], i); // Use getTileState for simple coloring
                   result += state === 'green' ? '🟩' : state === 'yellow' ? '🟨' : '⬜';
+                }
+                // Fill remaining tiles with ⬜ if the guess was shorter than the answer
+                if (guessClean.length < target.length) {
+                    result += '⬜'.repeat(target.length - guessClean.length);
                 }
                 return result;
               }).join('\n');
+              
               const dayName = dayOfWeek.charAt(0).toUpperCase() + dayOfWeek.slice(1);
-              const text = "BuzzKill " + dayName + " " + guesses.length + "/" + config.tries + " 💼\n" + emojis;
-              navigator.clipboard.writeText(text).then(() => alert('Copied to clipboard!')).catch(() => alert('Unable to copy'));
+              const statusEmoji = gameState === 'won' ? '🏆' : '💼';
+              const text = `BuzzKill ${dayName} ${guesses.length}/${config.tries} ${statusEmoji}\n\n${emojis}\n\n${window.location.href}`;
+              
+              navigator.clipboard.writeText(text).then(() => alert('Copied results to clipboard!')).catch(() => alert('Unable to copy'));
             };
 
             const resetGame = () => {
@@ -284,7 +343,7 @@ jobs:
               return (
                 <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center text-white">
                   <div className="text-center">
-                    <div className="w-12 h-12 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <div className="w-12 h-12 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                     <p className="text-slate-400">Loading your daily dose of corporate BS...</p>
                   </div>
                 </div>
@@ -296,39 +355,41 @@ jobs:
                 <div className="max-w-2xl mx-auto">
                   <div className="text-center mb-8">
                     <h1 className="text-5xl font-bold mb-2 bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">BuzzKill</h1>
-                    <p className="text-slate-400 mb-4">Decode the corporate BS</p>
+                    <p className="text-slate-300 mb-4">Decode the corporate BS</p>
                     <div className="flex justify-center gap-6 mb-4 text-sm">
                       <div className="flex items-center gap-2">
-                        <Trophy className="w-4 h-4 text-yellow-400" />
-                        <span className="text-slate-400">Played: <span className="text-white font-bold">{stats.gamesPlayed}</span></span>
+                        <Trophy className="w-4 h-4 text-cyan-400" />
+                        <span className="text-slate-300">Played: <span className="text-white font-bold">{stats.gamesPlayed}</span></span>
                       </div>
-                      <div className="text-slate-400">Win Rate: <span className="text-green-400 font-bold">{stats.gamesPlayed > 0 ? Math.round((stats.gamesWon / stats.gamesPlayed) * 100) : 0}%</span></div>
-                      <div className="text-slate-400">Streak: <span className="text-orange-400 font-bold">{stats.currentStreak} 🔥</span></div>
+                      <div className="text-slate-300">Win Rate: <span className="text-emerald-400 font-bold">{stats.gamesPlayed > 0 ? Math.round((stats.gamesWon / stats.gamesPlayed) * 100) : 0}%</span></div>
+                      <div className="text-slate-300">Streak: <span className="text-orange-400 font-bold">{stats.currentStreak} 🔥</span></div>
                     </div>
-                    <div className="inline-block bg-slate-800 px-6 py-2 rounded-full">
-                      <span className="text-yellow-400 font-bold capitalize">{dayOfWeek}</span>
-                      <span className="text-slate-400 ml-2">• {config.hint}</span>
+                    <div className="inline-block bg-slate-800 px-6 py-2 rounded-full border border-cyan-500/30">
+                      <span className="text-cyan-400 font-bold capitalize">{dayOfWeek}</span>
+                      <span className="text-slate-300 ml-2">• {config.hint}</span>
                     </div>
                   </div>
                   <div className="flex gap-2 mb-6 bg-slate-800 p-1 rounded-lg">
-                    <button onClick={() => setShowGenerator(false)} className={"flex-1 py-2 px-4 rounded-md transition-colors " + (!showGenerator ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white')}>Daily Challenge</button>
-                    <button onClick={() => setShowGenerator(true)} className={"flex-1 py-2 px-4 rounded-md transition-colors " + (showGenerator ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white')}><Zap className="inline w-4 h-4 mr-1" />Jargon Generator</button>
+                    <button onClick={() => setShowGenerator(false)} className={"flex-1 py-2 px-4 rounded-md transition-colors font-medium " + (!showGenerator ? 'bg-slate-700 text-white shadow-lg shadow-slate-900/50' : 'text-slate-300 hover:text-cyan-400')}>Daily Challenge</button>
+                    <button onClick={() => setShowGenerator(true)} className={"flex-1 py-2 px-4 rounded-md transition-colors font-medium " + (showGenerator ? 'bg-slate-700 text-white shadow-lg shadow-slate-900/50' : 'text-slate-300 hover:text-cyan-400')}><Zap className="inline w-4 h-4 mr-1" />Jargon Generator</button>
                   </div>
                   {!showGenerator ? (
                     <>
-                      <div className="bg-slate-800 rounded-lg p-6 mb-6">
+                      <div className="bg-slate-800 rounded-xl p-6 mb-6 shadow-2xl shadow-slate-900/70 border border-slate-700">
                         <div className="text-center mb-6">
-                          <div className="text-3xl font-mono tracking-widest text-yellow-400 mb-4">{getMaskedPhrase()}</div>
-                          {config.category && <div className="text-sm text-slate-400">Category: <span className="text-yellow-400">{currentJargon.category}</span></div>}
+                          {/* Increased font size for masked phrase */}
+                          <div className="text-4xl font-mono tracking-widest text-cyan-400 mb-4">{getMaskedPhrase()}</div>
+                          {config.category && <div className="text-sm text-slate-300">Category: <span className="text-cyan-400 font-medium">{currentJargon.category}</span></div>}
                         </div>
-                        <div className="space-y-2 mb-6 min-h-[200px]">
+                        <div className="space-y-3 mb-6 min-h-[200px]">
                           {guesses.map((g, idx) => (
                             <div key={idx} className="flex gap-1 justify-center flex-wrap">
                               {g.split('').map((letter, i) => {
                                 if (letter === ' ') return <div key={i} className="w-2"></div>;
+                                // Use position from clean guess for correct state coloring
                                 const position = g.slice(0, i).replace(/\s/g, '').length;
-                                const state = getLetterState(letter, position);
-                                return <div key={i} className={"w-10 h-10 flex items-center justify-center font-bold rounded " + (state === 'green' ? 'bg-green-600' : state === 'yellow' ? 'bg-yellow-600' : 'bg-slate-600')}>{letter}</div>;
+                                const state = getTileState(letter, position);
+                                return <div key={i} className={"w-8 h-8 md:w-10 md:h-10 transition-all duration-150 flex items-center justify-center font-bold text-lg rounded-md " + (state === 'green' ? 'bg-emerald-600' : state === 'yellow' ? 'bg-yellow-600' : 'bg-slate-600')}>{letter}</div>;
                               })}
                             </div>
                           ))}
@@ -336,45 +397,53 @@ jobs:
                         {gameState === 'playing' && (
                           <div className="space-y-4">
                             <div className="flex gap-2">
-                              <input type="text" value={guess} onChange={(e) => setGuess(e.target.value.toUpperCase())} onKeyDown={(e) => e.key === 'Enter' && handleGuess()} placeholder="Type your guess..." className="flex-1 bg-slate-700 text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400" maxLength={50} autoFocus />
-                              <button onClick={handleGuess} className="bg-yellow-500 hover:bg-yellow-600 text-slate-900 px-6 py-3 rounded-lg font-bold transition-colors">Guess</button>
+                              {/* Added disabled state for button */}
+                              <input type="text" value={guess} onChange={(e) => setGuess(e.target.value.toUpperCase())} onKeyDown={(e) => e.key === 'Enter' && handleGuess()} placeholder="Type your guess..." className="flex-1 bg-slate-700 text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-shadow" maxLength={50} autoFocus />
+                              <button onClick={handleGuess} disabled={guess.trim().length === 0} className="bg-yellow-500 hover:bg-yellow-600 text-slate-900 px-6 py-3 rounded-lg font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Guess</button>
                             </div>
-                            <div className="text-center text-slate-400 text-sm">{guesses.length}/{config.tries} tries used</div>
+                            <div className="text-center text-slate-300 text-sm">{guesses.length}/{config.tries} tries used</div>
                           </div>
                         )}
                       </div>
                       {gameState !== 'playing' && (
-                        <div className="bg-gradient-to-br from-slate-700 to-slate-800 rounded-lg p-6 mb-6 border-2 border-yellow-400">
+                        <div className="bg-gradient-to-br from-slate-700 to-slate-800 rounded-xl p-6 mb-6 border-2 border-cyan-400 shadow-2xl shadow-cyan-900/50">
                           <div className="text-center mb-4">
-                            <h2 className="text-2xl font-bold text-yellow-400 mb-2">{gameState === 'won' ? '🎯 Decoded!' : '💼 The Answer'}</h2>
-                            <div className="text-3xl font-bold mb-4">{currentJargon.phrase}</div>
+                            {/* Changed win color to emerald */}
+                            <h2 className="text-2xl font-bold text-emerald-400 mb-2">{gameState === 'won' ? '🎯 Decoded!' : '💼 The Answer'}</h2>
+                            <div className="text-3xl font-bold mb-4 text-white">{currentJargon.phrase}</div>
                           </div>
-                          <div className="space-y-3 text-left bg-slate-900 rounded-lg p-4">
-                            <div><span className="text-slate-400 text-sm">Translation:</span><p className="text-white font-medium">{currentJargon.translation}</p></div>
-                            <div><span className="text-slate-400 text-sm">Usage:</span><p className="text-white text-sm">{currentJargon.usage}</p></div>
-                            <div><span className="text-slate-400 text-sm">Danger Level:</span><p className="text-red-400 text-lg">{'🚩'.repeat(currentJargon.danger)}</p></div>
+                          {/* Emphasized translation with lighter background */}
+                          <div className="space-y-3 text-left">
+                            <div className="bg-slate-700 rounded-lg p-4 mb-3 border border-slate-600">
+                                <span className="text-slate-300 text-sm">Translation:</span>
+                                <p className="text-white font-semibold text-lg">{currentJargon.translation}</p>
+                            </div>
+                            <div className="bg-slate-900 rounded-lg p-4">
+                                <div><span className="text-slate-400 text-sm">Usage:</span><p className="text-slate-300 text-sm">{currentJargon.usage}</p></div>
+                                <div><span className="text-slate-400 text-sm">Danger Level:</span><p className="text-red-400 text-lg mt-1">{'🚩'.repeat(currentJargon.danger)}</p></div>
+                            </div>
                           </div>
                           <div className="flex gap-2 mt-6">
-                            <button onClick={shareResults} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-colors font-medium"><Share2 className="w-4 h-4" />Share</button>
-                            <button onClick={resetGame} className="flex-1 bg-slate-600 hover:bg-slate-700 text-white px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-colors font-medium"><RotateCcw className="w-4 h-4" />New Game</button>
+                            <button onClick={shareResults} className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-colors font-medium"><Share2 className="w-4 h-4" />Share Results</button>
+                            <button onClick={resetGame} className="flex-1 bg-slate-600 hover:bg-slate-700 text-white px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-colors font-medium"><RotateCcw className="w-4 h-4" />New Phrase</button>
                           </div>
                         </div>
                       )}
                     </>
                   ) : (
-                    <div className="bg-slate-800 rounded-lg p-6">
+                    <div className="bg-slate-800 rounded-xl p-6 shadow-2xl shadow-slate-900/70 border border-slate-700">
                       <div className="text-center mb-6">
-                        <AlertCircle className="w-12 h-12 text-yellow-400 mx-auto mb-3" />
+                        <Zap className="w-12 h-12 text-yellow-400 mx-auto mb-3" />
                         <h2 className="text-2xl font-bold mb-2">Peak Corporate Generator</h2>
-                        <p className="text-slate-400">Need to sound important in your next email?</p>
+                        <p className="text-slate-300">Need to sound important in your next email?</p>
                       </div>
                       {generatedJargon && (
-                        <div className="bg-slate-700 rounded-lg p-6 mb-6 text-center">
-                          <p className="text-xl text-yellow-400 font-medium mb-4">"{generatedJargon}"</p>
-                          <button onClick={() => { navigator.clipboard.writeText(generatedJargon).then(() => alert('Copied! Use at your own risk ⚠️')).catch(() => alert('Unable to copy')); }} className="text-sm text-slate-400 hover:text-white transition-colors">📋 Copy to clipboard</button>
+                        <div className="bg-slate-700 rounded-lg p-6 mb-6 text-center border border-slate-600">
+                          <p className="text-xl text-cyan-400 font-medium mb-4">"{generatedJargon}"</p>
+                          <button onClick={() => { navigator.clipboard.writeText(generatedJargon).then(() => alert('Copied! Use at your own risk ⚠️')).catch(() => alert('Unable to copy')); }} className="text-sm text-slate-300 hover:text-white transition-colors">📋 Copy to clipboard</button>
                         </div>
                       )}
-                      <button onClick={generateJargon} className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-slate-900 font-bold px-6 py-4 rounded-lg transition-all transform hover:scale-105"><Zap className="inline w-5 h-5 mr-2" />Generate Peak Corporate</button>
+                      <button onClick={generateJargon} className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-slate-900 font-bold px-6 py-4 rounded-lg transition-all transform hover:scale-105 shadow-xl shadow-yellow-900/50"><Zap className="inline w-5 h-5 mr-2" />Generate Peak Corporate</button>
                       <p className="text-center text-xs text-slate-500 mt-4">⚠️ Use at your own risk. May cause eye-rolling.</p>
                     </div>
                   )}
