@@ -1,0 +1,300 @@
+name: Deploy BuzzKill to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: |
+          npm install react react-dom react-scripts lucide-react
+          npm install -D tailwindcss postcss autoprefixer
+          npx tailwindcss init -p
+
+      - name: Create project structure
+        run: |
+          mkdir -p public src
+          
+      - name: Create public files
+        run: |
+          cat > public/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+            <head>
+              <meta charset="utf-8" />
+              <meta name="viewport" content="width=device-width, initial-scale=1" />
+              <meta name="theme-color" content="#0f172a" />
+              <meta name="description" content="BuzzKill - Daily corporate jargon puzzle game" />
+              <title>BuzzKill - Decode Corporate BS</title>
+            </head>
+            <body>
+              <noscript>You need to enable JavaScript to run this app.</noscript>
+              <div id="root"></div>
+            </body>
+          </html>
+          EOF
+
+      - name: Create package.json
+        run: |
+          cat > package.json << 'EOF'
+          {
+            "name": "buzzkill",
+            "version": "1.0.0",
+            "private": true,
+            "dependencies": {
+              "react": "^18.2.0",
+              "react-dom": "^18.2.0",
+              "react-scripts": "5.0.1",
+              "lucide-react": "^0.263.1"
+            },
+            "scripts": {
+              "start": "react-scripts start",
+              "build": "react-scripts build"
+            },
+            "eslintConfig": {
+              "extends": ["react-app"]
+            },
+            "browserslist": {
+              "production": [">0.2%", "not dead", "not op_mini all"],
+              "development": ["last 1 chrome version", "last 1 firefox version", "last 1 safari version"]
+            }
+          }
+          EOF
+
+      - name: Create tailwind.config.js
+        run: |
+          cat > tailwind.config.js << 'EOF'
+          module.exports = {
+            content: ["./src/**/*.{js,jsx,ts,tsx}"],
+            theme: { extend: {} },
+            plugins: []
+          }
+          EOF
+
+      - name: Create App.js
+        run: |
+          cat > src/App.js << 'APPEOF'
+          import React, { useState, useEffect } from 'react';
+          import { AlertCircle, Share2, Zap, RotateCcw, Trophy } from 'lucide-react';
+
+          const JARGON_DATABASE = {
+            monday: [
+              { phrase: "CIRCLE BACK", translation: "I'm ignoring this forever", usage: "When someone asks you to do something you have no intention of doing", danger: 3, category: "Meeting Jargon" },
+              { phrase: "MOVE THE NEEDLE", translation: "Make literally any impact", usage: "When your boss wants to sound strategic about basic improvements", danger: 4, category: "Executive Speech" }
+            ],
+            tuesday: [
+              { phrase: "TOUCH BASE", translation: "Pointless check-in meeting", usage: "When you need to justify your calendar", danger: 3, category: "Meeting Jargon" }
+            ],
+            wednesday: [
+              { phrase: "PIVOT", translation: "Our strategy failed, trying something else", usage: "When pretending failure is innovation", danger: 4, category: "Strategy Jargon" }
+            ],
+            thursday: [
+              { phrase: "PING ME", translation: "Send me a message", usage: "By people who think they're in The Matrix", danger: 1, category: "Communication" }
+            ],
+            friday: [
+              { phrase: "REACH OUT", translation: "Contact someone", usage: "By people allergic to the word 'email'", danger: 1, category: "Communication" }
+            ]
+          };
+
+          const DIFFICULTY_CONFIG = {
+            monday: { tries: 8, hint: "Nightmare Mode - No help. Good luck.", category: false, firstLetter: false, vowels: false },
+            tuesday: { tries: 7, hint: "Category revealed", category: true, firstLetter: false, vowels: false },
+            wednesday: { tries: 6, hint: "First letters shown", category: true, firstLetter: true, vowels: false },
+            thursday: { tries: 5, hint: "Vowels revealed", category: true, firstLetter: false, vowels: true },
+            friday: { tries: 4, hint: "Maximum hints - Victory lap!", category: true, firstLetter: true, vowels: true }
+          };
+
+          function App() {
+            const [dayOfWeek, setDayOfWeek] = useState('monday');
+            const [currentJargon, setCurrentJargon] = useState(null);
+            const [guess, setGuess] = useState('');
+            const [guesses, setGuesses] = useState([]);
+            const [gameState, setGameState] = useState('playing');
+
+            useEffect(() => {
+              const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+              const today = new Date().getDay();
+              let gameDay = days[today];
+              if (gameDay === 'sunday' || gameDay === 'saturday') gameDay = 'monday';
+              setDayOfWeek(gameDay);
+              const jargonList = JARGON_DATABASE[gameDay];
+              setCurrentJargon(jargonList[Math.floor(Math.random() * jargonList.length)]);
+            }, []);
+
+            const config = DIFFICULTY_CONFIG[dayOfWeek];
+
+            const getMaskedPhrase = () => {
+              if (!currentJargon) return '';
+              return currentJargon.phrase.split(' ').map(word => {
+                return word.split('').map((letter, idx) => {
+                  if (config.vowels && 'AEIOU'.includes(letter)) return letter;
+                  if (config.firstLetter && (idx === 0 || idx === word.length - 1)) return letter;
+                  return '_';
+                }).join('');
+              }).join('   ');
+            };
+
+            const getLetterState = (letter, index) => {
+              if (!currentJargon) return 'gray';
+              const target = currentJargon.phrase.replace(/\s/g, '');
+              if (target[index] === letter) return 'green';
+              if (target.includes(letter)) return 'yellow';
+              return 'gray';
+            };
+
+            const handleGuess = () => {
+              if (!currentJargon || gameState !== 'playing') return;
+              const cleanGuess = guess.toUpperCase().trim();
+              if (cleanGuess.length === 0) return;
+              const newGuesses = [...guesses, cleanGuess];
+              setGuesses(newGuesses);
+              setGuess('');
+              if (cleanGuess === currentJargon.phrase) {
+                setGameState('won');
+              } else if (newGuesses.length >= config.tries) {
+                setGameState('lost');
+              }
+            };
+
+            if (!currentJargon) return <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center text-white">Loading...</div>;
+
+            return (
+              <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white p-4">
+                <div className="max-w-2xl mx-auto">
+                  <div className="text-center mb-8">
+                    <h1 className="text-5xl font-bold mb-2 bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">BuzzKill</h1>
+                    <p className="text-slate-400">Decode the corporate BS</p>
+                    <div className="inline-block bg-slate-800 px-6 py-2 rounded-full mt-4">
+                      <span className="text-yellow-400 font-bold capitalize">{dayOfWeek}</span>
+                      <span className="text-slate-400 ml-2">• {config.hint}</span>
+                    </div>
+                  </div>
+                  <div className="bg-slate-800 rounded-lg p-6 mb-6">
+                    <div className="text-center mb-6">
+                      <div className="text-3xl font-mono tracking-widest text-yellow-400 mb-4">{getMaskedPhrase()}</div>
+                      {config.category && <div className="text-sm text-slate-400">Category: <span className="text-yellow-400">{currentJargon.category}</span></div>}
+                    </div>
+                    <div className="space-y-2 mb-6 min-h-[200px]">
+                      {guesses.map((g, idx) => (
+                        <div key={idx} className="flex gap-1 justify-center flex-wrap">
+                          {g.split('').map((letter, i) => {
+                            if (letter === ' ') return <div key={i} className="w-2"></div>;
+                            const guessClean = g.replace(/\s/g, '');
+                            const position = g.slice(0, i).replace(/\s/g, '').length;
+                            const state = getLetterState(letter, position);
+                            return (
+                              <div key={i} className={`w-10 h-10 flex items-center justify-center font-bold rounded ${state === 'green' ? 'bg-green-600' : state === 'yellow' ? 'bg-yellow-600' : 'bg-slate-600'}`}>
+                                {letter}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                    {gameState === 'playing' && (
+                      <div className="space-y-4">
+                        <div className="flex gap-2">
+                          <input type="text" value={guess} onChange={(e) => setGuess(e.target.value.toUpperCase())} onKeyPress={(e) => e.key === 'Enter' && handleGuess()} placeholder="Type your guess..." className="flex-1 bg-slate-700 text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400" maxLength={50} />
+                          <button onClick={handleGuess} className="bg-yellow-500 hover:bg-yellow-600 text-slate-900 px-6 py-3 rounded-lg font-bold">Guess</button>
+                        </div>
+                        <div className="text-center text-slate-400 text-sm">{guesses.length}/{config.tries} tries used</div>
+                      </div>
+                    )}
+                  </div>
+                  {gameState !== 'playing' && (
+                    <div className="bg-gradient-to-br from-slate-700 to-slate-800 rounded-lg p-6 border-2 border-yellow-400">
+                      <div className="text-center mb-4">
+                        <h2 className="text-2xl font-bold text-yellow-400 mb-2">{gameState === 'won' ? '🎯 Decoded!' : '💼 The Answer'}</h2>
+                        <div className="text-3xl font-bold mb-4">{currentJargon.phrase}</div>
+                      </div>
+                      <div className="space-y-3 bg-slate-900 rounded-lg p-4">
+                        <div><span className="text-slate-400 text-sm">Translation:</span><p className="text-white font-medium">{currentJargon.translation}</p></div>
+                        <div><span className="text-slate-400 text-sm">Usage:</span><p className="text-white text-sm">{currentJargon.usage}</p></div>
+                        <div><span className="text-slate-400 text-sm">Danger Level:</span><p className="text-red-400 text-lg">{'🚩'.repeat(currentJargon.danger)}</p></div>
+                      </div>
+                      <button onClick={() => window.location.reload()} className="w-full mt-6 bg-slate-600 hover:bg-slate-700 text-white px-4 py-3 rounded-lg font-medium">New Game</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          }
+
+          export default App;
+          APPEOF
+
+      - name: Create index.css
+        run: |
+          cat > src/index.css << 'EOF'
+          @tailwind base;
+          @tailwind components;
+          @tailwind utilities;
+          body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; }
+          EOF
+
+      - name: Create index.js
+        run: |
+          cat > src/index.js << 'EOF'
+          import React from 'react';
+          import ReactDOM from 'react-dom/client';
+          import './index.css';
+          import App from './App';
+          const root = ReactDOM.createRoot(document.getElementById('root'));
+          root.render(<React.StrictMode><App /></React.StrictMode>);
+          EOF
+
+      - name: Build
+        run: npm run build
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v3
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: './build'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
+```
+
+6. Change the filename from `main.yml` to `deploy.yml` (optional but clearer)
+7. Click **"Commit changes..."** (green button top right)
+8. Click **"Commit changes"** in the popup
+
+### **Step 4: Watch the Deployment**
+
+1. Stay on the **"Actions"** tab
+2. You'll see a workflow running called "Deploy BuzzKill to GitHub Pages"
+3. Click on it to watch the progress
+4. Wait 3-5 minutes for it to complete (green checkmark ✅)
+
+### **Step 5: Find Your URL**
+
+1. Go back to **Settings** → **Pages**
+2. You'll see: **"Your site is live at https://YOUR-USERNAME.github.io/buzzkill/"**
+3. Click the link to open your game!
+
+### **Step 6: Share with Colleagues! 🎉**
+
+Your game is now live at:
+```
+https://YOUR-USERNAME.github.io/buzzkill/
