@@ -15,12 +15,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
 
       - name: Install dependencies
         run: |
@@ -97,19 +97,29 @@ jobs:
           const JARGON_DATABASE = {
             monday: [
               { phrase: "CIRCLE BACK", translation: "I'm ignoring this forever", usage: "When someone asks you to do something you have no intention of doing", danger: 3, category: "Meeting Jargon" },
-              { phrase: "MOVE THE NEEDLE", translation: "Make literally any impact", usage: "When your boss wants to sound strategic about basic improvements", danger: 4, category: "Executive Speech" }
+              { phrase: "MOVE THE NEEDLE", translation: "Make literally any impact", usage: "When your boss wants to sound strategic about basic improvements", danger: 4, category: "Executive Speech" },
+              { phrase: "BOIL THE OCEAN", translation: "Attempting the impossible", usage: "When someone's project scope is ridiculously large", danger: 4, category: "Project Management" },
+              { phrase: "LOW HANGING FRUIT", translation: "The easy stuff we should've done months ago", usage: "When pretending obvious tasks are strategic wins", danger: 2, category: "Strategy Jargon" }
             ],
             tuesday: [
-              { phrase: "TOUCH BASE", translation: "Pointless check-in meeting", usage: "When you need to justify your calendar", danger: 3, category: "Meeting Jargon" }
+              { phrase: "TOUCH BASE", translation: "Pointless check-in meeting", usage: "When you need to justify your calendar", danger: 3, category: "Meeting Jargon" },
+              { phrase: "SYNERGY", translation: "We're forcing teams to work together", usage: "During mergers or when justifying layoffs", danger: 5, category: "Executive Speech" },
+              { phrase: "BANDWIDTH", translation: "Time or energy to do work", usage: "When saying no without saying no", danger: 2, category: "Resource Management" }
             ],
             wednesday: [
-              { phrase: "PIVOT", translation: "Our strategy failed, trying something else", usage: "When pretending failure is innovation", danger: 4, category: "Strategy Jargon" }
+              { phrase: "PIVOT", translation: "Our strategy failed, trying something else", usage: "When pretending failure is innovation", danger: 4, category: "Strategy Jargon" },
+              { phrase: "DEEP DIVE", translation: "Actually look at the details", usage: "When someone finally wants to understand something", danger: 2, category: "Analysis Jargon" },
+              { phrase: "TABLE THIS", translation: "Never speak of this again", usage: "When killing ideas politely", danger: 3, category: "Meeting Jargon" }
             ],
             thursday: [
-              { phrase: "PING ME", translation: "Send me a message", usage: "By people who think they're in The Matrix", danger: 1, category: "Communication" }
+              { phrase: "PING ME", translation: "Send me a message", usage: "By people who think they're in The Matrix", danger: 1, category: "Communication" },
+              { phrase: "LEVERAGE", translation: "Use", usage: "When 'use' sounds too simple", danger: 3, category: "Action Verbs" },
+              { phrase: "PARKING LOT", translation: "Idea graveyard", usage: "For topics we're pretending we'll discuss later", danger: 4, category: "Meeting Jargon" }
             ],
             friday: [
-              { phrase: "REACH OUT", translation: "Contact someone", usage: "By people allergic to the word 'email'", danger: 1, category: "Communication" }
+              { phrase: "REACH OUT", translation: "Contact someone", usage: "By people allergic to the word 'email'", danger: 1, category: "Communication" },
+              { phrase: "LOOP IN", translation: "Add to email chain", usage: "When spreading blame or credit", danger: 2, category: "Communication" },
+              { phrase: "ALIGN", translation: "Agree", usage: "When making agreement sound harder than it is", danger: 2, category: "Collaboration" }
             ]
           };
 
@@ -121,12 +131,21 @@ jobs:
             friday: { tries: 4, hint: "Maximum hints - Victory lap!", category: true, firstLetter: true, vowels: true }
           };
 
+          const JARGON_TEMPLATES = {
+            verbs: ["operationalize", "leverage", "sunset", "ideate", "monetize", "synergize", "strategize", "optimize"],
+            objects: ["our bandwidth", "the synergy", "this stakeholder", "the paradigm", "these verticals", "the ecosystem"],
+            modifiers: ["going forward", "at scale", "in the pipeline", "on my radar", "moving forward", "holistically"]
+          };
+
           function App() {
             const [dayOfWeek, setDayOfWeek] = useState('monday');
             const [currentJargon, setCurrentJargon] = useState(null);
             const [guess, setGuess] = useState('');
             const [guesses, setGuesses] = useState([]);
             const [gameState, setGameState] = useState('playing');
+            const [showGenerator, setShowGenerator] = useState(false);
+            const [generatedJargon, setGeneratedJargon] = useState('');
+            const [stats, setStats] = useState({ gamesPlayed: 0, gamesWon: 0, currentStreak: 0 });
 
             useEffect(() => {
               const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -168,9 +187,41 @@ jobs:
               setGuess('');
               if (cleanGuess === currentJargon.phrase) {
                 setGameState('won');
+                setStats(prev => ({ gamesPlayed: prev.gamesPlayed + 1, gamesWon: prev.gamesWon + 1, currentStreak: prev.currentStreak + 1 }));
               } else if (newGuesses.length >= config.tries) {
                 setGameState('lost');
+                setStats(prev => ({ gamesPlayed: prev.gamesPlayed + 1, gamesWon: prev.gamesWon, currentStreak: 0 }));
               }
+            };
+
+            const generateJargon = () => {
+              const verb = JARGON_TEMPLATES.verbs[Math.floor(Math.random() * JARGON_TEMPLATES.verbs.length)];
+              const object = JARGON_TEMPLATES.objects[Math.floor(Math.random() * JARGON_TEMPLATES.objects.length)];
+              const modifier = JARGON_TEMPLATES.modifiers[Math.floor(Math.random() * JARGON_TEMPLATES.modifiers.length)];
+              setGeneratedJargon("Let's " + verb + " " + object + " " + modifier);
+            };
+
+            const shareResults = () => {
+              const emojis = guesses.map(g => {
+                const guessClean = g.replace(/\s/g, '');
+                let result = '';
+                for (let i = 0; i < guessClean.length; i++) {
+                  const state = getLetterState(guessClean[i], i);
+                  result += state === 'green' ? '🟩' : state === 'yellow' ? '🟨' : '⬜';
+                }
+                return result;
+              }).join('\n');
+              const dayName = dayOfWeek.charAt(0).toUpperCase() + dayOfWeek.slice(1);
+              const text = "BuzzKill " + dayName + " " + guesses.length + "/" + config.tries + " 💼\n" + emojis;
+              navigator.clipboard.writeText(text).then(() => alert('Copied to clipboard!')).catch(() => alert('Unable to copy'));
+            };
+
+            const resetGame = () => {
+              const jargonList = JARGON_DATABASE[dayOfWeek];
+              setCurrentJargon(jargonList[Math.floor(Math.random() * jargonList.length)]);
+              setGuesses([]);
+              setGuess('');
+              setGameState('playing');
             };
 
             if (!currentJargon) return <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center text-white">Loading...</div>;
@@ -180,58 +231,91 @@ jobs:
                 <div className="max-w-2xl mx-auto">
                   <div className="text-center mb-8">
                     <h1 className="text-5xl font-bold mb-2 bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">BuzzKill</h1>
-                    <p className="text-slate-400">Decode the corporate BS</p>
-                    <div className="inline-block bg-slate-800 px-6 py-2 rounded-full mt-4">
+                    <p className="text-slate-400 mb-4">Decode the corporate BS</p>
+                    <div className="flex justify-center gap-6 mb-4 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Trophy className="w-4 h-4 text-yellow-400" />
+                        <span className="text-slate-400">Played: <span className="text-white font-bold">{stats.gamesPlayed}</span></span>
+                      </div>
+                      <div className="text-slate-400">Win Rate: <span className="text-green-400 font-bold">{stats.gamesPlayed > 0 ? Math.round((stats.gamesWon / stats.gamesPlayed) * 100) : 0}%</span></div>
+                      <div className="text-slate-400">Streak: <span className="text-orange-400 font-bold">{stats.currentStreak} 🔥</span></div>
+                    </div>
+                    <div className="inline-block bg-slate-800 px-6 py-2 rounded-full">
                       <span className="text-yellow-400 font-bold capitalize">{dayOfWeek}</span>
                       <span className="text-slate-400 ml-2">• {config.hint}</span>
                     </div>
                   </div>
-                  <div className="bg-slate-800 rounded-lg p-6 mb-6">
-                    <div className="text-center mb-6">
-                      <div className="text-3xl font-mono tracking-widest text-yellow-400 mb-4">{getMaskedPhrase()}</div>
-                      {config.category && <div className="text-sm text-slate-400">Category: <span className="text-yellow-400">{currentJargon.category}</span></div>}
-                    </div>
-                    <div className="space-y-2 mb-6 min-h-[200px]">
-                      {guesses.map((g, idx) => (
-                        <div key={idx} className="flex gap-1 justify-center flex-wrap">
-                          {g.split('').map((letter, i) => {
-                            if (letter === ' ') return <div key={i} className="w-2"></div>;
-                            const guessClean = g.replace(/\s/g, '');
-                            const position = g.slice(0, i).replace(/\s/g, '').length;
-                            const state = getLetterState(letter, position);
-                            return (
-                              <div key={i} className={`w-10 h-10 flex items-center justify-center font-bold rounded ${state === 'green' ? 'bg-green-600' : state === 'yellow' ? 'bg-yellow-600' : 'bg-slate-600'}`}>
-                                {letter}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ))}
-                    </div>
-                    {gameState === 'playing' && (
-                      <div className="space-y-4">
-                        <div className="flex gap-2">
-                          <input type="text" value={guess} onChange={(e) => setGuess(e.target.value.toUpperCase())} onKeyPress={(e) => e.key === 'Enter' && handleGuess()} placeholder="Type your guess..." className="flex-1 bg-slate-700 text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400" maxLength={50} />
-                          <button onClick={handleGuess} className="bg-yellow-500 hover:bg-yellow-600 text-slate-900 px-6 py-3 rounded-lg font-bold">Guess</button>
-                        </div>
-                        <div className="text-center text-slate-400 text-sm">{guesses.length}/{config.tries} tries used</div>
-                      </div>
-                    )}
+                  <div className="flex gap-2 mb-6 bg-slate-800 p-1 rounded-lg">
+                    <button onClick={() => setShowGenerator(false)} className={"flex-1 py-2 px-4 rounded-md transition-colors " + (!showGenerator ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white')}>Daily Challenge</button>
+                    <button onClick={() => setShowGenerator(true)} className={"flex-1 py-2 px-4 rounded-md transition-colors " + (showGenerator ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white')}><Zap className="inline w-4 h-4 mr-1" />Jargon Generator</button>
                   </div>
-                  {gameState !== 'playing' && (
-                    <div className="bg-gradient-to-br from-slate-700 to-slate-800 rounded-lg p-6 border-2 border-yellow-400">
-                      <div className="text-center mb-4">
-                        <h2 className="text-2xl font-bold text-yellow-400 mb-2">{gameState === 'won' ? '🎯 Decoded!' : '💼 The Answer'}</h2>
-                        <div className="text-3xl font-bold mb-4">{currentJargon.phrase}</div>
+                  {!showGenerator ? (
+                    <>
+                      <div className="bg-slate-800 rounded-lg p-6 mb-6">
+                        <div className="text-center mb-6">
+                          <div className="text-3xl font-mono tracking-widest text-yellow-400 mb-4">{getMaskedPhrase()}</div>
+                          {config.category && <div className="text-sm text-slate-400">Category: <span className="text-yellow-400">{currentJargon.category}</span></div>}
+                        </div>
+                        <div className="space-y-2 mb-6 min-h-[200px]">
+                          {guesses.map((g, idx) => (
+                            <div key={idx} className="flex gap-1 justify-center flex-wrap">
+                              {g.split('').map((letter, i) => {
+                                if (letter === ' ') return <div key={i} className="w-2"></div>;
+                                const position = g.slice(0, i).replace(/\s/g, '').length;
+                                const state = getLetterState(letter, position);
+                                return <div key={i} className={"w-10 h-10 flex items-center justify-center font-bold rounded " + (state === 'green' ? 'bg-green-600' : state === 'yellow' ? 'bg-yellow-600' : 'bg-slate-600')}>{letter}</div>;
+                              })}
+                            </div>
+                          ))}
+                        </div>
+                        {gameState === 'playing' && (
+                          <div className="space-y-4">
+                            <div className="flex gap-2">
+                              <input type="text" value={guess} onChange={(e) => setGuess(e.target.value.toUpperCase())} onKeyPress={(e) => e.key === 'Enter' && handleGuess()} placeholder="Type your guess..." className="flex-1 bg-slate-700 text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400" maxLength={50} autoFocus />
+                              <button onClick={handleGuess} className="bg-yellow-500 hover:bg-yellow-600 text-slate-900 px-6 py-3 rounded-lg font-bold transition-colors">Guess</button>
+                            </div>
+                            <div className="text-center text-slate-400 text-sm">{guesses.length}/{config.tries} tries used</div>
+                          </div>
+                        )}
                       </div>
-                      <div className="space-y-3 bg-slate-900 rounded-lg p-4">
-                        <div><span className="text-slate-400 text-sm">Translation:</span><p className="text-white font-medium">{currentJargon.translation}</p></div>
-                        <div><span className="text-slate-400 text-sm">Usage:</span><p className="text-white text-sm">{currentJargon.usage}</p></div>
-                        <div><span className="text-slate-400 text-sm">Danger Level:</span><p className="text-red-400 text-lg">{'🚩'.repeat(currentJargon.danger)}</p></div>
+                      {gameState !== 'playing' && (
+                        <div className="bg-gradient-to-br from-slate-700 to-slate-800 rounded-lg p-6 mb-6 border-2 border-yellow-400">
+                          <div className="text-center mb-4">
+                            <h2 className="text-2xl font-bold text-yellow-400 mb-2">{gameState === 'won' ? '🎯 Decoded!' : '💼 The Answer'}</h2>
+                            <div className="text-3xl font-bold mb-4">{currentJargon.phrase}</div>
+                          </div>
+                          <div className="space-y-3 text-left bg-slate-900 rounded-lg p-4">
+                            <div><span className="text-slate-400 text-sm">Translation:</span><p className="text-white font-medium">{currentJargon.translation}</p></div>
+                            <div><span className="text-slate-400 text-sm">Usage:</span><p className="text-white text-sm">{currentJargon.usage}</p></div>
+                            <div><span className="text-slate-400 text-sm">Danger Level:</span><p className="text-red-400 text-lg">{'🚩'.repeat(currentJargon.danger)}</p></div>
+                          </div>
+                          <div className="flex gap-2 mt-6">
+                            <button onClick={shareResults} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-colors font-medium"><Share2 className="w-4 h-4" />Share</button>
+                            <button onClick={resetGame} className="flex-1 bg-slate-600 hover:bg-slate-700 text-white px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-colors font-medium"><RotateCcw className="w-4 h-4" />New Game</button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="bg-slate-800 rounded-lg p-6">
+                      <div className="text-center mb-6">
+                        <AlertCircle className="w-12 h-12 text-yellow-400 mx-auto mb-3" />
+                        <h2 className="text-2xl font-bold mb-2">Peak Corporate Generator</h2>
+                        <p className="text-slate-400">Need to sound important in your next email?</p>
                       </div>
-                      <button onClick={() => window.location.reload()} className="w-full mt-6 bg-slate-600 hover:bg-slate-700 text-white px-4 py-3 rounded-lg font-medium">New Game</button>
+                      {generatedJargon && (
+                        <div className="bg-slate-700 rounded-lg p-6 mb-6 text-center">
+                          <p className="text-xl text-yellow-400 font-medium mb-4">"{generatedJargon}"</p>
+                          <button onClick={() => { navigator.clipboard.writeText(generatedJargon).then(() => alert('Copied! Use at your own risk ⚠️')).catch(() => alert('Unable to copy')); }} className="text-sm text-slate-400 hover:text-white transition-colors">📋 Copy to clipboard</button>
+                        </div>
+                      )}
+                      <button onClick={generateJargon} className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-slate-900 font-bold px-6 py-4 rounded-lg transition-all transform hover:scale-105"><Zap className="inline w-5 h-5 mr-2" />Generate Peak Corporate</button>
+                      <p className="text-center text-xs text-slate-500 mt-4">⚠️ Use at your own risk. May cause eye-rolling.</p>
                     </div>
                   )}
+                  <div className="text-center text-slate-500 text-xs mt-8">
+                    <p>BuzzKill • Decode corporate jargon daily</p>
+                  </div>
                 </div>
               </div>
             );
@@ -264,13 +348,13 @@ jobs:
         run: npm run build
 
       - name: Setup Pages
-        uses: actions/configure-pages@v3
+        uses: actions/configure-pages@v4
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v2
+        uses: actions/upload-pages-artifact@v3
         with:
           path: './build'
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v2
+        uses: actions/deploy-pages@v4
