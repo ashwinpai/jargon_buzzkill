@@ -274,27 +274,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v2
-```
-
-6. Change the filename from `main.yml` to `deploy.yml` (optional but clearer)
-7. Click **"Commit changes..."** (green button top right)
-8. Click **"Commit changes"** in the popup
-
-### **Step 4: Watch the Deployment**
-
-1. Stay on the **"Actions"** tab
-2. You'll see a workflow running called "Deploy BuzzKill to GitHub Pages"
-3. Click on it to watch the progress
-4. Wait 3-5 minutes for it to complete (green checkmark ✅)
-
-### **Step 5: Find Your URL**
-
-1. Go back to **Settings** → **Pages**
-2. You'll see: **"Your site is live at https://YOUR-USERNAME.github.io/buzzkill/"**
-3. Click the link to open your game!
-
-### **Step 6: Share with Colleagues! 🎉**
-
-Your game is now live at:
-```
-https://YOUR-USERNAME.github.io/buzzkill/
