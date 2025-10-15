@@ -22,15 +22,58 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install dependencies
-        run: |
-          npm install react react-dom react-scripts lucide-react
-          npm install -D tailwindcss postcss autoprefixer
-          npx tailwindcss init -p
-
       - name: Create project structure
         run: |
           mkdir -p public src
+
+      - name: Create package.json
+        run: |
+          cat > package.json << 'EOF'
+          {
+            "name": "buzzkill",
+            "version": "1.0.0",
+            "private": true,
+            "dependencies": {
+              "react": "^18.2.0",
+              "react-dom": "^18.2.0",
+              "react-scripts": "5.0.1",
+              "lucide-react": "^0.263.1"
+            },
+            "devDependencies": {
+              "tailwindcss": "^3.3.0",
+              "postcss": "^8.4.31",
+              "autoprefixer": "^10.4.16"
+            },
+            "scripts": {
+              "start": "react-scripts start",
+              "build": "react-scripts build"
+            },
+            "eslintConfig": {
+              "extends": ["react-app"]
+            },
+            "browserslist": {
+              "production": [">0.2%", "not dead", "not op_mini all"],
+              "development": ["last 1 chrome version", "last 1 firefox version", "last 1 safari version"]
+            }
+          }
+          EOF
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Create Tailwind config
+        run: |
+          npx tailwindcss init -p
+
+      - name: Update tailwind.config.js
+        run: |
+          cat > tailwind.config.js << 'EOF'
+          module.exports = {
+            content: ["./src/**/*.{js,jsx,ts,tsx}"],
+            theme: { extend: {} },
+            plugins: []
+          }
+          EOF
           
       - name: Create public files
         run: |
@@ -49,43 +92,6 @@ jobs:
               <div id="root"></div>
             </body>
           </html>
-          EOF
-
-      - name: Create package.json
-        run: |
-          cat > package.json << 'EOF'
-          {
-            "name": "buzzkill",
-            "version": "1.0.0",
-            "private": true,
-            "dependencies": {
-              "react": "^18.2.0",
-              "react-dom": "^18.2.0",
-              "react-scripts": "5.0.1",
-              "lucide-react": "^0.263.1"
-            },
-            "scripts": {
-              "start": "react-scripts start",
-              "build": "react-scripts build"
-            },
-            "eslintConfig": {
-              "extends": ["react-app"]
-            },
-            "browserslist": {
-              "production": [">0.2%", "not dead", "not op_mini all"],
-              "development": ["last 1 chrome version", "last 1 firefox version", "last 1 safari version"]
-            }
-          }
-          EOF
-
-      - name: Create tailwind.config.js
-        run: |
-          cat > tailwind.config.js << 'EOF'
-          module.exports = {
-            content: ["./src/**/*.{js,jsx,ts,tsx}"],
-            theme: { extend: {} },
-            plugins: []
-          }
           EOF
 
       - name: Create App.js
